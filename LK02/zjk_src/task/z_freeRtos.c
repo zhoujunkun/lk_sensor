@@ -6,6 +6,10 @@
 //zjk include
 #include "z_include.h"
  typedef enum{ trig_onece_complete =1,trig_enough_complete,trig_time_out} TDC_TRIGSTATU;
+ z_tim_sturct  z_tx_pwm_signal={&TIM_SIGNAL,TIM_SIGNAL_CHANNEL};
+ 
+ #define  z_signal_start() HAL_TIM_PWM_Start(z_tx_pwm_signal.z_tim, z_tx_pwm_signal.tim_channel)
+ #define  z_signal_stop() HAL_TIM_PWM_Stop(z_tx_pwm_signal.z_tim, z_tx_pwm_signal.tim_channel)
 /*全局变量定义*/
 int trigCount = 0;  //触发采集到的次数计数
 int erroTimeOutCount = 0;  //tdc 时间超时中断错误标记
@@ -133,17 +137,23 @@ void SerialTask(void  *argument)
 
 void Gp21TrigTask(void *argument)
 {
-
+  BaseType_t xResult;
   tdc_board_init();   /*初始化激光板*/
 //	if((lk_param_statu.ifGetOnceDist == false) ||(lk_param_statu.ifContinuDist ==false))
 //	{
 //		 vTaskSuspend(NULL);  //任务挂起如果没有命令接收到
 //	}
+	trigOnce();
+	z_signal_start();   //启动pwm
 	lk_param_statu.ifContinuDist = true;
   /* Infinite loop */
   for(;;)
   {
- 		  while(gp21_read_intn() == GPIO_PIN_SET)
+		
+		xResult = xSemaphoreTake(semaExitphore,portMAX_DELAY);
+		_TDC_GP21.tlc_resualt= tdc_agc_control(); 	
+		trigEnough();  //处理数据
+ 		/*  while(gp21_read_intn() == GPIO_PIN_SET)
 				{
            trigOnce();
 					 //parmSend(&lk_parm);
@@ -175,7 +185,7 @@ void Gp21TrigTask(void *argument)
 						osDelay(1);
 					}					
 				}	     
-         				 	 
+     */    				 	 
 	 }
 
   /* USER CODE END Gp21TrigTask */
@@ -185,7 +195,7 @@ void trigOnce(void)
 {
 	gp21_write(OPC_START_TOF);					
 	gp21_en_stop1Signal();	
-	gp21_startOneSignal();	/*trig a start signal*/		
+	//gp21_startOneSignal();	/*trig a start signal*/		
 }
 
 TDC_TRIGSTATU trigGetData(void)
@@ -196,8 +206,9 @@ TDC_TRIGSTATU trigGetData(void)
  	
 	if(gp21_statu_INT & GP21_STATU_CH1)
 	{
-		gp21_close_stop1Signal();		
-    _TDC_GP21.gp21_distance[trigCount++] = gp21_read_diatance();//收集激光测量数据		
+		//gp21_close_stop1Signal();		
+    _TDC_GP21.gp21_distance[trigCount++] = gp21_read_diatance();//收集激光测量数据
+		trigOnce();
     if(trigCount == DISTANCE_RCV_SIZE) 	
 		{
 			trigCount = 0;
@@ -285,10 +296,14 @@ uint16_t tdc_agc_control(void)
    /* gp21 intn interrupt callback */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 { 
-  
+  BaseType_t XHigherPriorityTaskWoken = pdTRUE;
   if(GPIO_Pin ==GP21_INTN_Pin )
 	{ 
-		 tdc_statu = trigGetData(); 	 //收集采集到的测量数据		
+		 tdc_statu = trigGetData(); 	 //收集采集到的测量数据	
+     if(tdc_statu == trig_enough_complete)
+		 {
+			 xSemaphoreGiveFromISR(semaExitphore,&XHigherPriorityTaskWoken);
+		 }			 
 	}
 
 }  

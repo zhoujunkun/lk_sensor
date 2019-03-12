@@ -54,8 +54,8 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GP21_NSS_GPIO_Port, GP21_NSS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, TDC_Signal_Pin|TDC_Power_Ctl_Pin|Laser_Light_Pin|TDC_Sighal_AngleReles_Pin 
-                          |tlc5618_cs_Pin|GP21_EN_Stop1_Pin|GP21_EN_Start_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, TDC_Power_Ctl_Pin|Laser_Light_Pin|TDC_Sighal_AngleReles_Pin|tlc5618_cs_Pin 
+                          |GP21_EN_Stop1_Pin|GP21_EN_Start_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PtPin */
   GPIO_InitStruct.Pin = GP21_RSTN_Pin;
@@ -71,13 +71,6 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GP21_NSS_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = TDC_Signal_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(TDC_Signal_GPIO_Port, &GPIO_InitStruct);
-
   /*Configure GPIO pins : PBPin PBPin PBPin PBPin 
                            PBPin PBPin */
   GPIO_InitStruct.Pin = TDC_Power_Ctl_Pin|Laser_Light_Pin|TDC_Sighal_AngleReles_Pin|tlc5618_cs_Pin 
@@ -89,9 +82,13 @@ void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PtPin */
   GPIO_InitStruct.Pin = GP21_INTN_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GP21_INTN_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 }
 

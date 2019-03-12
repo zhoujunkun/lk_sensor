@@ -7,6 +7,13 @@
 
 #define tdc_rx_voltge_high()      HAL_GPIO_WritePin(TDC_Sighal_AngleReles_GPIO_Port,TDC_Sighal_AngleReles_Pin,GPIO_PIN_SET)
 #define tdc_rx_voltge_low()       HAL_GPIO_WritePin(TDC_Sighal_AngleReles_GPIO_Port,TDC_Sighal_AngleReles_Pin,GPIO_PIN_RESET)
+
+typedef struct {
+  TIM_HandleTypeDef *z_tim;
+  uint32_t tim_channel;
+}z_tim_sturct;
+
+
 /*≤Œ ˝≈‰÷√*/
 #define AD603_AGC_DEFAULT   300  
 #define AD603_AGC_MIN     200 //0.16V -10DB
@@ -21,6 +28,6 @@
 void gp21_distance_cal(uint32_t *dit,uint8_t dislens);
 
  void tdc_rx_voltge_relese(void);
-
+extern SemaphoreHandle_t  semaExitphore;
 #endif
 

@@ -7,6 +7,9 @@
 #define DRIVER_ADC_HADC hadc1
 #define DRIVER_SPI_TDC   hspi1
 #define DRIVER_SPI_TLC5618   hspi2
+
+#define TIM_SIGNAL htim3
+#define TIM_SIGNAL_CHANNEL  TIM_CHANNEL_3
 /*参数状态*/
 typedef struct
 {

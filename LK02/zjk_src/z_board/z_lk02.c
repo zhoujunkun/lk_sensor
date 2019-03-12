@@ -2,15 +2,11 @@
 #define tdc_power_on()      HAL_GPIO_WritePin(TDC_Power_Ctl_GPIO_Port,TDC_Power_Ctl_Pin,GPIO_PIN_RESET)
 #define tdc_power_off()      HAL_GPIO_WritePin(TDC_Power_Ctl_GPIO_Port,TDC_Power_Ctl_Pin,GPIO_PIN_SET)
 
+SemaphoreHandle_t  semaExitphore =NULL;  //创建信号量，用于外部中断触发
+
 _TDC_typ _TDC_GP21;
-
-
-typedef struct {
-  TIM_HandleTypeDef *z_tim;
-  uint32_t tim_channel;
-}z_tim_sturct;
-
 z_tim_sturct  z_rx_pwm_hvCtl ={&htim2,TIM_CHANNEL_4};
+
 
  void tdc_rx_voltge_relese(void)
 {
@@ -40,6 +36,7 @@ z_tim_sturct  z_rx_pwm_hvCtl ={&htim2,TIM_CHANNEL_4};
 
  void tdc_board_init(void)
  {
+	  BaseType_t xResult;
 	  tdc_power_on();   /*TDC Power ON*/
 		tlc_rx_pwmHvStart();     /*LK RV High Voltage open*/
 		rx_pwmHv (260);    /*rx high voltage control*/  
@@ -52,7 +49,9 @@ z_tim_sturct  z_rx_pwm_hvCtl ={&htim2,TIM_CHANNEL_4};
 	  _TDC_GP21.pid.setpoint = PID_SETPOINT;
 	 
 	 	tlc5618_write(TX_HIGH_VOL_TLC5618,AD603_AGC_DEFAULT); /*LK  AGC DAC Voltage control*/  
-	  tlc5618_writeAchannal(TX_HIGH_VOL_TLC5618);	 	 
+	  tlc5618_writeAchannal(TX_HIGH_VOL_TLC5618);	 
+
+    semaExitphore = xSemaphoreCreateBinary();	 
  }
 
 #define GP22_TNS  800       //gp21 ???? 800ns 1.25MHZ

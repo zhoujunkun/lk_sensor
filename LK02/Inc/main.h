@@ -118,6 +118,7 @@ void Error_Handler(void);
 #define tlc5618_dat_GPIO_Port GPIOB
 #define GP21_INTN_Pin GPIO_PIN_12
 #define GP21_INTN_GPIO_Port GPIOA
+#define GP21_INTN_EXTI_IRQn EXTI15_10_IRQn
 #define GP21_EN_Stop1_Pin GPIO_PIN_4
 #define GP21_EN_Stop1_GPIO_Port GPIOB
 #define GP21_EN_Start_Pin GPIO_PIN_5
