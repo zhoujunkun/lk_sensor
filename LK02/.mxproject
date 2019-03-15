@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=E:/zjk/LK02_cube/lk02/Inc
+HeaderPath=E:/zjk_lk/develop/cube/new/LK02_cube/lk02/Inc
 HeaderFiles=FreeRTOSConfig.h;stm32f1xx_it.h;stm32f1xx_hal_conf.h;main.h;gpio.h;spi.h;tim.h;dma.h;usart.h;adc.h;
-SourcePath=E:/zjk/LK02_cube/lk02/Src
+SourcePath=E:/zjk_lk/develop/cube/new/LK02_cube/lk02/Src
 SourceFiles=freertos.c;stm32f1xx_it.c;stm32f1xx_hal_msp.c;main.c;gpio.c;spi.c;tim.c;dma.c;usart.c;adc.c;
 
 [PreviousLibFiles]
