@@ -15,7 +15,7 @@ typedef struct
 	bool ifGetOnceDist;
 	bool ifContinuDist;
 	bool ifStopContinu;
-
+	bool ifSpeedStart;
 }lk_statu_;
 
 /*结构对应数据指针和数据长度*/
@@ -49,6 +49,7 @@ extern parm_ lk_flash;
 //函数
 void parmSend(parm_ *parm);
 void zTF_sendOnceDist(uint8_t *data,uint8_t lens);   //发送测量距离
+void zTF_sendSpeed(uint8_t *data,uint8_t lens);      //速度发送
 arrayByte_ structToBytes(parm_ *p);       //参数结构转对应数组结构
 extern lk_statu_ lk_param_statu;
 extern EventGroupHandle_t xTinyFrameEventGroup;

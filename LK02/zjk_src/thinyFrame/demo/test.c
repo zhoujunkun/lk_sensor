@@ -21,6 +21,7 @@ lk_statu_ lk_param_statu={
 	.ifGetOnceDist = false,
 	.ifContinuDist = false,
 	.ifStopContinu = false,
+	.ifSpeedStart =  false,
 };
 
 
@@ -44,7 +45,7 @@ arrayByte_ structToBytes(parm_ *p)
 
 ///*激光器保存参数*/
 parm_ lk_parm ={
-	.product = 0x02,     //产品号lk03
+	.product = 0x01,     //产品号lk02
 	.baud_rate = 115200, //波特率
 	.limit_trigger = 100, //100米触发
 	.red_laser_light = 0x01, //打开:0x01 关闭：0
@@ -70,8 +71,9 @@ parm_ lk_flash=
 	 .ifHasConfig = 0,      //第一次烧写flash后会变成0x01
 };
 
-typedef enum  { DataDistSend = 1, ParmsConfig = 2, ParmaSend, ErroSend }FRAME_TYPE_CMD ;
+typedef enum  { DataDistSend = 1, ParmsConfig = 2, ParmaSend, SpeedCtl,ErroSend }FRAME_TYPE_CMD ;
 typedef enum  { ParamAll=1}FRAME_GetParam_CMD;
+typedef enum  { SPEED=1,STOP}FRAME_SpeedCtlId_CMD;
 typedef enum  { DistOnce = 1, DistContinue,DistStop}FRAME_GetDataID_CMD;
 typedef enum  { BarudRate = 1, RedLight, FrontOrBase }FRAME_ParmSaveID_CMD;
 
@@ -116,7 +118,22 @@ void paramGetCmdSlect(FRAME_GetParam_CMD Param_GET, TF_Msg *msg)
 	 
 	 }
 }
-
+/*速度控制*/
+void speedStatuCmdSlect(FRAME_SpeedCtlId_CMD speedStatu, TF_Msg *msg)
+{
+  
+   switch(speedStatu)  //参数获取
+	 {
+		 case SPEED:
+		 {
+		   lk_param_statu.ifSpeedStart= true; 
+		 }break;
+		 case STOP:
+		 {
+		   lk_param_statu.ifSpeedStart= false; 
+		 }break;	 
+	 }
+}
 
 /*参数保存命令*/
 void paramDataSaveCMD(FRAME_ParmSaveID_CMD PAMRM_SAVE, TF_Msg *msg)
@@ -166,6 +183,11 @@ TF_Msg *cmdMsg =NULL;
 			FRAME_GetDataID_CMD getDataCmd =  (FRAME_GetDataID_CMD) (cmdMsg->frame_id);
 		  dataGetCmdSlect(getDataCmd,msg);
 		}break;
+	  case SpeedCtl:/*速度测量控制*/
+		{
+			FRAME_SpeedCtlId_CMD SpeedCtlcmd =  (FRAME_SpeedCtlId_CMD) (cmdMsg->frame_id);
+		  speedStatuCmdSlect(SpeedCtlcmd,msg);
+		}break;		
 	  case ParmaSend: /*参数获取*/
 		{
 			FRAME_GetParam_CMD getParamCmd =  (FRAME_GetParam_CMD) (cmdMsg->frame_id);
@@ -238,10 +260,19 @@ void zTF_sendOnceDist(uint8_t *data,uint8_t lens)
 	  msg.frame_id = DistOnce;
     msg.data = data;
     msg.len = lens;
-  //  TF_Send(demo_tf, &msg);
+
   	TF_Respond(demo_tf, &msg);
 }
-
+void zTF_sendSpeed(uint8_t *data,uint8_t lens)
+{
+    TF_Msg msg;
+    TF_ClearMsg(&msg);
+    msg.type = SpeedCtl;
+	  msg.frame_id = SPEED;
+    msg.data = data;
+    msg.len = lens;
+  	TF_Respond(demo_tf, &msg);
+}
 /*id listener add*/
 void z_ListenerInit(void)
 {

@@ -16,6 +16,7 @@ void mpu6050_send_data(short aacx,short aacy,short aacz,short gyrox,short gyroy,
 #define BYTE2(dwTemp)       (*((char *)(&dwTemp) + 2))
 #define BYTE3(dwTemp)       (*((char *)(&dwTemp) + 3))
 void Send_Pose_Data(uint16_t *a,uint16_t *b,uint16_t *c);
+void Send_Pose_InData(int16_t *a,uint16_t *b,uint16_t *c);
 void Data_Send_Status(float Pitch,float Roll,float Yaw,int16_t *gyro,int16_t *accel);
 void Send_Pose_IData(uint16_t *Gyro,int16_t *Accel);
 #endif

@@ -175,6 +175,35 @@ void Send_Pose_Data(uint16_t *a,uint16_t *b,uint16_t *c)
 	for(i=0;i<_cnt;i++)
 		z_serial_write(&data_to_send[i],1);
 }
+void Send_Pose_InData(int16_t *a,uint16_t *b,uint16_t *c)
+{
+	unsigned char i=0;
+	unsigned char _cnt=0,sum = 0;
+//	unsigned int _temp;
+	uint8_t data_to_send[50];
+
+	data_to_send[_cnt++]=0xAA;
+	data_to_send[_cnt++]=0xAA;
+	data_to_send[_cnt++]=0xF1;
+	data_to_send[_cnt++]=0;
+	
+
+	data_to_send[_cnt++]=BYTE1(a[0]);
+	data_to_send[_cnt++]=BYTE0(a[0]);
+	data_to_send[_cnt++]=BYTE1(b[0]);
+	data_to_send[_cnt++]=BYTE0(b[0]);
+	data_to_send[_cnt++]=BYTE1(c[0]);
+	data_to_send[_cnt++]=BYTE0(c[0]);
+	
+	data_to_send[3] = _cnt-4;
+	//和校验
+	for(i=0;i<_cnt;i++)
+		sum+= data_to_send[i];
+	data_to_send[_cnt++]=sum;
+	//串口发送数据
+	for(i=0;i<_cnt;i++)
+		z_serial_write(&data_to_send[i],1);
+}
 
 void Send_Pose_IData(uint16_t *Gyro,int16_t *Accel)
 {

@@ -1,6 +1,6 @@
 #include "z_flashParamSave.h"
 
-#define FLASH_SIZE 256 //所选MCU的FLASH容量大小（单位K）
+#define FLASH_SIZE 64 //所选MCU的FLASH容量大小（单位K）
 
 #if FLASH_SIZE<256
 	#define NUMBER_PAGE 1   //字节

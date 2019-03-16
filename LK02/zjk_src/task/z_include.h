@@ -64,6 +64,7 @@ extern _TDC_typ _TDC_GP21;
 //task create
 void z_taskCreate(void);
 
-
+#define red_light_on()  HAL_GPIO_WritePin(Laser_Light_GPIO_Port,Laser_Light_Pin,GPIO_PIN_RESET)
+#define red_light_off()  HAL_GPIO_WritePin(Laser_Light_GPIO_Port,Laser_Light_Pin,GPIO_PIN_SET)
 
 #endif

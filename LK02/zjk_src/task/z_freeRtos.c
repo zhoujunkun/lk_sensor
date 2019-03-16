@@ -10,7 +10,9 @@
 int trigCount = 0;  //触发采集到的次数计数
 int erroTimeOutCount = 0;  //tdc 时间超时中断错误标记
 bool ifEnoughTrigComplete = false; //采集一次测量数据是否完成
+ uint16_t lk_speed ;   //速度测速 km/h，1.23km/h = 1.23 * 100 = 123
  TDC_TRIGSTATU tdc_statu;
+ int16_t valusDiff,test_value;
 /*任务句柄创建*/
 static TaskHandle_t xHandleSerial = NULL;
 TaskHandle_t xHandleGp21Trig = NULL;
@@ -22,7 +24,7 @@ void Gp21TrigTask(void  * argument);
  void LK_sensorParamTask(void *argument);
 extern void z_serialDriverTask(void  * argument);
 extern void z_tiny_test(void);
-
+void board_ParamConfig(void);
 uint16_t tdc_agc_control(void);
 void trigEnough(void);
 TDC_TRIGSTATU trigGetData(void);
@@ -30,14 +32,14 @@ void trigOnce(void);
 void speed_ctl(uint32_t now_value,uint32_t last_value);
 void z_taskCreate(void)
 {
-//	xTaskCreate(
-//	              LK_sensorParamTask,    //任务函数
-//	              "LK_sensorParamTask",  //任务名
-//								128,          //任务栈大小，也就是4个字节
-//	              NULL,
-//								1,            //任务优先级
-//								&xHandleSensorParam
-//	            );	
+	xTaskCreate(
+	              LK_sensorParamTask,    //任务函数
+	              "LK_sensorParamTask",  //任务名
+								128,          //任务栈大小，也就是4个字节
+	              NULL,
+								1,            //任务优先级
+								&xHandleSensorParam
+	            );	
 	xTaskCreate(
 	             SerialTask,    //任务函数
 	             "SerialTask",  //任务名
@@ -77,14 +79,21 @@ void LK_sensorParamTask(void *argument)
 	flash_paramRead(flashParam.point,flashParam.lens); //读取参数
 	if(lk_flash.ifHasConfig != 0x01)   //还没有配置
 	{	
-		lk_flash.ifHasConfig = 0x01;   //代表配置
+		lk_parm.ifHasConfig = 0x01;   //代表配置
 	  lk_flash = lk_parm;
+		
     flash_writeMoreData( (uint16_t *)(paramBuff.point),paramBuff.lens/2+1);		
 	}
+	else
+	{
+	  lk_parm = lk_flash;
+	}
+   board_ParamConfig();
   for(;;)
 	{
 	  if(lk_param_statu.ifParamSave)
-		{ 
+		{
+     board_ParamConfig();
 		 flash_writeMoreData( (uint16_t *)(paramBuff.point),paramBuff.lens/2+1);
 		 lk_param_statu.ifParamSave = false;
 		}
@@ -114,8 +123,9 @@ void SerialTask(void  *argument)
      if(_TDC_GP21.isGp21Complete)
 		 {
 			 _TDC_GP21.isGp21Complete = 0;
-		   Send_Pose_Data(&_TDC_GP21.rev_siganl.vol,&_TDC_GP21.tdc_distance,&_TDC_GP21.tlc_resualt);
-//       uint8_t *sendBuf =(uint8_t*)(&_TDC_GP21.tdc_distance);
+		 //  Send_Pose_Data(&_TDC_GP21.rev_siganl.vol,&_TDC_GP21.tdc_distance,&_TDC_GP21.tlc_resualt);
+       Send_Pose_InData(&valusDiff,&_TDC_GP21.tdc_distance,&test_value);
+			 //       uint8_t *sendBuf =(uint8_t*)(&_TDC_GP21.tdc_distance);
 //			 zTF_sendOnceDist(sendBuf,2);			 
 		 }				 
     osDelay(5);
@@ -168,12 +178,13 @@ void Gp21TrigTask(void *argument)
 						 lk_param_statu.ifGetOnceDist = false;
 						 vTaskSuspend(NULL);
 					}
-					if(lk_param_statu.ifContinuDist)   //多次测量
+					else if (lk_param_statu.ifContinuDist)   //多次测量
 					{
 						//  uint8_t *sendBuf =(uint8_t*)(&_TDC_GP21.tdc_distance);
 						// zTF_sendOnceDist(sendBuf,2);
 						//osDelay(1);
-					}					
+					}
+					
 				}	     
          				 	 
 	 }
@@ -218,10 +229,11 @@ if(gp21_statu_INT & GP21_STATU_TIMEOUT)  //超出时间测量
 }
 
 #define REVE_SIZE_F 40
-uint32_t test_dist[REVE_SIZE_F] = {0},count_test,last_dist,now_dist;
+uint32_t test_dist[REVE_SIZE_F] = {0},count_test;
+uint16_t last_dist,now_dist;
 typedef enum {WEIGHT_SELECT=1,WEIGHT_CONR} WEIGHT_ENUM;
 WEIGHT_ENUM weight_enum=WEIGHT_SELECT;
-float speed=0,weightValue_k;
+
 /*采集到足够数据后开始数据处理*/
 void trigEnough(void)
 {
@@ -234,20 +246,26 @@ void trigEnough(void)
 	if(count_test == REVE_SIZE_F)
 		{
 		  count_test = 0;
-			last_dist = now_dist;
+			last_dist = test_dist[1]; //第一个数组数据不准确，选取第二个
 			for(int i=0;i<REVE_SIZE_F;i+=2)
 			{
 			   total_col+= test_dist[i]+test_dist[i+1];
 			}
-			_TDC_GP21.tdc_distance = total_col/REVE_SIZE_F;
-      now_dist = _TDC_GP21.tdc_distance;
+			//_TDC_GP21.tdc_distance = total_col/REVE_SIZE_F;d
+      now_dist = test_dist[REVE_SIZE_F-1];
 			speed_ctl(now_dist,last_dist);
-     _TDC_GP21.isGp21Complete =1 ;
+		  if(lk_param_statu.ifSpeedStart)   //速度测量
+			{
+			   uint8_t *sendBuf =(uint8_t*)(&lk_speed);
+	      zTF_sendSpeed(sendBuf,2);			
+			}			
+    // _TDC_GP21.isGp21Complete =1 ;
 			tdc_wire_toggle();
 			osDelay(1);
 		}		
 //	_TDC_GP21.isGp21Complete = 1;		
 }
+
 /*AGC Control
 @input: input voltage feedback value, unit mv
 
@@ -336,12 +354,31 @@ void maxa(uint32_t *dist, int dislens)
 
 }
 
-uint32_t valusDiff;
+	float speed=0,weightValue_k;
 void speed_ctl(uint32_t now_value,uint32_t last_value)
 {
-			valusDiff = now_value - last_value;
-			 // weightValue = now_dist;
-      
-			speed = valusDiff/30;    //cm/ms
 
+			valusDiff = now_value - last_value;
+			if(valusDiff)
+			{
+				speed = valusDiff/30;    //cm/ms
+			}
+			else
+			{
+			  speed = (-valusDiff)/30;    //cm/ms
+			}
+      
+			lk_speed = speed*100;
+}
+
+void board_ParamConfig(void)
+{
+	if(lk_parm.red_laser_light)
+	{
+	  red_light_on();	 
+	}
+	else
+	{
+	  red_light_off();
+	}
 }
