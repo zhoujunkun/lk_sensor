@@ -149,7 +149,7 @@ void Gp21TrigTask(void *argument)
 //	{
 //		 vTaskSuspend(NULL);  //任务挂起如果没有命令接收到
 //	}
-	lk_param_statu.ifContinuDist = true;
+//	lk_param_statu.ifContinuDist = true;
   /* Infinite loop */
   for(;;)
   {
@@ -170,21 +170,7 @@ void Gp21TrigTask(void *argument)
         if(tdc_statu == trig_enough_complete)
 				{
 				  _TDC_GP21.tlc_resualt= tdc_agc_control(); 	
-				   trigEnough();  //处理数据
-					if(lk_param_statu.ifGetOnceDist)   //单次测量
-					{
-						  uint8_t *sendBuf =(uint8_t*)(&_TDC_GP21.tdc_distance);
-						 zTF_sendOnceDist(sendBuf,2);
-						 lk_param_statu.ifGetOnceDist = false;
-						 vTaskSuspend(NULL);
-					}
-					else if (lk_param_statu.ifContinuDist)   //多次测量
-					{
-						//  uint8_t *sendBuf =(uint8_t*)(&_TDC_GP21.tdc_distance);
-						// zTF_sendOnceDist(sendBuf,2);
-						//osDelay(1);
-					}
-					
+				   trigEnough();  //处理数据					
 				}	     
          				 	 
 	 }
@@ -228,7 +214,8 @@ if(gp21_statu_INT & GP21_STATU_TIMEOUT)  //超出时间测量
 	return false;
 }
 
-#define REVE_SIZE_F 40
+#define REVE_SIZE_F 40    //30ms
+//#define REVE_SIZE_F 100
 uint32_t test_dist[REVE_SIZE_F] = {0},count_test;
 uint16_t last_dist,now_dist;
 typedef enum {WEIGHT_SELECT=1,WEIGHT_CONR} WEIGHT_ENUM;
@@ -251,19 +238,35 @@ void trigEnough(void)
 			{
 			   total_col+= test_dist[i]+test_dist[i+1];
 			}
-			//_TDC_GP21.tdc_distance = total_col/REVE_SIZE_F;d
+			_TDC_GP21.tdc_distance = total_col/REVE_SIZE_F;
       now_dist = test_dist[REVE_SIZE_F-1];
 			speed_ctl(now_dist,last_dist);
 		  if(lk_param_statu.ifSpeedStart)   //速度测量
+			{				
+//			   uint8_t *sendBuf =(uint8_t*)(&lk_speed);
+//	      zTF_sendSpeed(sendBuf,2);		
+       Send_Pose_InData(&lk_speed,&last_dist,&now_dist);
+				
+			}		
+			if(lk_param_statu.ifGetOnceDist)   //单次测量
 			{
-			   uint8_t *sendBuf =(uint8_t*)(&lk_speed);
-	      zTF_sendSpeed(sendBuf,2);			
+					uint8_t *sendBuf =(uint8_t*)(&_TDC_GP21.tdc_distance);
+				 zTF_sendOnceDist(sendBuf,2);
+				 lk_param_statu.ifGetOnceDist = false;
+				 vTaskSuspend(NULL);
+			}
+			else if (lk_param_statu.ifContinuDist)   //多次测量
+			{
+					uint8_t *sendBuf =(uint8_t*)(&_TDC_GP21.tdc_distance);
+				 zTF_sendOnceDist(sendBuf,2);
+				//osDelay(1);
 			}			
+		
     // _TDC_GP21.isGp21Complete =1 ;
 			tdc_wire_toggle();
-			osDelay(1);
+		osDelay(1);
 		}		
-//	_TDC_GP21.isGp21Complete = 1;		
+   	
 }
 
 /*AGC Control
@@ -354,21 +357,28 @@ void maxa(uint32_t *dist, int dislens)
 
 }
 
+#define SPEED_KMH   1.2
 	float speed=0,weightValue_k;
 void speed_ctl(uint32_t now_value,uint32_t last_value)
 {
 
 			valusDiff = now_value - last_value;
-			if(valusDiff)
+	  if(valusDiff>5)       //大概低于12km/h 不检测
 			{
-				speed = valusDiff/30;    //cm/ms
-			}
+				if(valusDiff)
+				{
+					speed = valusDiff*1.2;    //km/h  1/36 cm/ms <=> 1km/h           36/30=1.2   valusDiff*1.2 =km/h     经测试30ms采集晚40个数据
+				}
+				else
+				{
+					speed = (-valusDiff)*1.2;    //
+				}
+			lk_speed = speed*10;
+      }
 			else
 			{
-			  speed = (-valusDiff)/30;    //cm/ms
+			  lk_speed = 0; 
 			}
-      
-			lk_speed = speed*100;
 }
 
 void board_ParamConfig(void)
